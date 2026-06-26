@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Check } from '../components/Icons'
+import { Check, Search } from '../components/Icons'
 import { useAuth } from '../context/AuthContext'
+import AdminProfileModal from '../components/AdminProfileModal'
 import { initials, avatarTint, majorShort } from '../lib/profile'
 
 function fmtDate(iso) {
@@ -18,6 +19,8 @@ export default function Admin() {
   const [approved, setApproved] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
+  const [preview, setPreview] = useState(null) // row shown in the full-profile modal
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -80,8 +83,22 @@ export default function Admin() {
     else load()
   }
 
+  const match = (r) => {
+    const n = query.trim().toLowerCase()
+    if (!n) return true
+    return `${r.full_name || ''} ${r.email || ''} ${r.major || ''}`.toLowerCase().includes(n)
+  }
+  const pendingShown = useMemo(() => pending.filter(match), [pending, query])
+  const approvedShown = useMemo(() => approved.filter(match), [approved, query])
+
   return (
     <div style={{ minHeight: '100vh' }}>
+      <AdminProfileModal
+        row={preview}
+        onClose={() => setPreview(null)}
+        onApprove={preview && (preview.status === 'pending' || preview.pending_review) ? approveItem : undefined}
+        onReject={preview && (preview.status === 'pending' || preview.pending_review) ? rejectItem : undefined}
+      />
       <header style={{ background: 'oklch(0.255 0.02 280)', color: 'var(--ink)', borderBottom: '1px solid var(--line)' }}>
         <div style={{ maxWidth: 1040, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -97,7 +114,21 @@ export default function Admin() {
 
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '32px 24px 72px' }}>
         <h1 style={{ font: '700 26px var(--display)', letterSpacing: '-.02em', margin: '0 0 4px', animation: 'riseIn .6s ease both' }}>Member management</h1>
-        <p style={{ fontSize: 15, color: 'var(--muted)', margin: '0 0 24px' }}>Review applications and manage approved graduates.</p>
+        <p style={{ fontSize: 15, color: 'var(--muted)', margin: '0 0 20px' }}>Review applications and manage approved graduates.</p>
+
+        {/* search */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: '8px 14px', maxWidth: 420, marginBottom: 22 }}>
+          <Search size={18} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by name, email, or major"
+            style={{ flex: 1, border: 'none', background: 'none', fontSize: 14.5, color: 'var(--ink)', padding: '4px 0' }}
+          />
+          {query && (
+            <button onClick={() => setQuery('')} title="Clear" style={{ background: 'none', border: 'none', color: 'var(--faint)', cursor: 'pointer', fontSize: 16 }}>×</button>
+          )}
+        </div>
 
         {error && <div style={{ fontSize: 13.5, color: 'oklch(0.7 0.17 25)', marginBottom: 16 }}>{error}</div>}
 
@@ -116,14 +147,14 @@ export default function Admin() {
         {loading ? (
           <div style={{ padding: '40px 0', color: 'var(--muted)' }}>Loading…</div>
         ) : tab === 'pending' ? (
-          pending.length > 0 ? (
+          pendingShown.length > 0 ? (
             <div className="card anim-fade-up" style={{ borderRadius: 16, overflow: 'hidden' }}>
-              <GridHead cols="1.8fr 1.3fr 2fr 1.4fr 1.4fr" items={['Name', 'Type', 'Major', 'Submitted', '']} />
-              {pending.map((p) => {
+              <GridHead cols="1.7fr 1.2fr 1.7fr 1.2fr 1.7fr" items={['Name', 'Type', 'Major', 'Submitted', '']} />
+              {pendingShown.map((p) => {
                 const isEdit = p.pending_review
                 const major = isEdit ? p.draft?.major || p.major : p.major
                 return (
-                  <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.3fr 2fr 1.4fr 1.4fr', gap: 12, padding: '16px 22px', borderTop: '1px solid var(--line)', alignItems: 'center' }}>
+                  <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1.7fr 1.2fr 1.7fr 1.2fr 1.7fr', gap: 12, padding: '16px 22px', borderTop: '1px solid var(--line)', alignItems: 'center' }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ font: '600 14.5px var(--body)', color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.full_name || '—'}</div>
                       <div style={{ fontSize: 12.5, color: 'var(--faint)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.email}</div>
@@ -132,6 +163,7 @@ export default function Admin() {
                     <span style={{ fontSize: 13.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{major || '—'}</span>
                     <span style={{ fontSize: 13.5, color: 'var(--muted)' }}>{fmtDate(isEdit ? p.updated_at : p.created_at)}</span>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button onClick={() => setPreview(p)} style={btnReject}>View</button>
                       <button onClick={() => rejectItem(p)} style={btnReject}>{isEdit ? 'Discard' : 'Reject'}</button>
                       <button onClick={() => approveItem(p)} style={btnApprove}>Approve</button>
                     </div>
@@ -139,19 +171,23 @@ export default function Admin() {
                 )
               })}
             </div>
+          ) : pending.length > 0 ? (
+            <NoMatches />
           ) : (
             <EmptyPending />
           )
         ) : (
           <div className="card anim-fade-up" style={{ borderRadius: 16, overflow: 'hidden' }}>
-            <GridHead cols="2.4fr 2fr 1.4fr 1.4fr" items={['Name', 'Major', 'Class', '']} />
+            <GridHead cols="2.4fr 1.8fr 1fr 1.8fr" items={['Name', 'Major', 'Class', '']} />
             {approved.length === 0 ? (
               <div style={{ padding: '40px 22px', color: 'var(--muted)', fontSize: 14.5 }}>No approved members yet.</div>
+            ) : approvedShown.length === 0 ? (
+              <NoMatches />
             ) : (
-              approved.map((a) => {
+              approvedShown.map((a) => {
                 const tint = avatarTint(a)
                 return (
-                  <div key={a.id} style={{ display: 'grid', gridTemplateColumns: '2.4fr 2fr 1.4fr 1.4fr', gap: 12, padding: '14px 22px', borderTop: '1px solid var(--line)', alignItems: 'center' }}>
+                  <div key={a.id} style={{ display: 'grid', gridTemplateColumns: '2.4fr 1.8fr 1fr 1.8fr', gap: 12, padding: '14px 22px', borderTop: '1px solid var(--line)', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
                       <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', font: '700 13px var(--display)', background: tint.bg, color: tint.ink }}>
                         {initials(a.full_name)}
@@ -169,8 +205,9 @@ export default function Admin() {
                     <span style={{ fontSize: 13.5, color: 'var(--muted)' }}>{a.major_short || majorShort(a.major)}</span>
                     <span style={{ fontSize: 13.5, color: 'var(--muted)' }}>{a.grad_year || '—'}</span>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button onClick={() => setPreview(a)} style={btnReject}>View</button>
                       {a.id === me?.id ? (
-                        <span style={{ fontSize: 12.5, color: 'var(--faint)', fontWeight: 600 }}>You</span>
+                        <span style={{ fontSize: 12.5, color: 'var(--faint)', fontWeight: 600, alignSelf: 'center' }}>You</span>
                       ) : (
                         <>
                           <button
@@ -222,6 +259,14 @@ function GridHead({ cols, items }) {
       {items.map((it, i) => (
         <span key={i}>{it}</span>
       ))}
+    </div>
+  )
+}
+
+function NoMatches() {
+  return (
+    <div style={{ textAlign: 'center', padding: '48px 24px', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, color: 'var(--muted)', fontSize: 14.5 }}>
+      No members match your search.
     </div>
   )
 }

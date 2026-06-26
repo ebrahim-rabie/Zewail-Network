@@ -217,19 +217,17 @@ export default function Dashboard() {
 
   return (
     <div style={{ minHeight: '100vh' }}>
-      <header style={{ background: 'var(--surface)', borderBottom: '1px solid var(--line)' }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Logo size={29} fontSize={17} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {isAdmin && (
-              <Link to="/admin" className="btn btn-outline" style={{ padding: '8px 16px', fontSize: 13 }}>
-                Admin panel
-              </Link>
-            )}
-            <button onClick={() => signOut().then(() => navigate('/'))} className="btn btn-outline" style={{ padding: '8px 16px', fontSize: 13, color: 'var(--muted)' }}>
-              Log out
-            </button>
-          </div>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '20px 28px' }}>
+        <Logo size={29} fontSize={17} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {isAdmin && (
+            <Link to="/admin" className="btn btn-outline" style={{ padding: '8px 16px', fontSize: 13 }}>
+              Admin panel
+            </Link>
+          )}
+          <button onClick={() => signOut().then(() => navigate('/'))} className="btn btn-outline" style={{ padding: '8px 16px', fontSize: 13, color: 'var(--muted)' }}>
+            Log out
+          </button>
         </div>
       </header>
 
