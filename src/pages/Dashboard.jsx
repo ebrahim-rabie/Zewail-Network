@@ -24,7 +24,12 @@ const emptyExp = () => ({
 })
 
 // Build editable form state from a profile row (migrating any legacy experiences).
-function toForm(p) {
+// If the member has a pending edit awaiting review, edit on top of that draft.
+function toForm(profileRow) {
+  const p =
+    profileRow.pending_review && profileRow.draft
+      ? { ...profileRow, ...profileRow.draft }
+      : profileRow
   return {
     full_name: p.full_name || '',
     photo_url: p.photo_url || '',
@@ -72,6 +77,7 @@ export default function Dashboard() {
   const [tab, setTab] = useState('basic')
   const [form, setForm] = useState(null)
   const [saved, setSaved] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [phoneValid, setPhoneValid] = useState(true)
@@ -151,7 +157,7 @@ export default function Dashboard() {
     // Compose each experience's display string + carry the headline/path forward.
     const experiences = form.experiences.map((x) => ({ ...x, dates: formatRange(x) || x.dates || '' }))
     const headline = currentExperience(experiences)
-    const payload = {
+    const fields = {
       full_name: form.full_name,
       photo_url: form.photo_url || null,
       location: form.location || null,
@@ -171,17 +177,30 @@ export default function Dashboard() {
       github: form.github || null,
       twitter: form.twitter || null,
       privacy: form.privacy,
-      updated_at: new Date().toISOString(),
     }
-    const { error } = await supabase.from('profiles').update(payload).eq('id', profile.id)
+
+    // Already-approved members: stage edits in `draft` for admin review (their
+    // public profile keeps showing the approved version). New/rejected members
+    // edit their live record directly.
+    const reviewMode = profile.status === 'approved' || profile.status === 'suspended'
+    const update = reviewMode
+      ? { draft: fields, pending_review: true }
+      : { ...fields, updated_at: new Date().toISOString() }
+
+    const { error } = await supabase.from('profiles').update(update).eq('id', profile.id)
     setSaving(false)
     if (error) { setError(error.message); return }
     const savedForm = { ...form, experiences }
     setForm(savedForm)
     snapshot.current = JSON.stringify(savedForm)
     await refreshProfile()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2200)
+    if (reviewMode) {
+      setSubmitted(true)
+      setTimeout(() => setSubmitted(false), 3200)
+    } else {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2200)
+    }
   }
 
   const statusBanner = {
@@ -192,6 +211,9 @@ export default function Dashboard() {
 
   // Major options: this school's majors, plus the current value if it's legacy.
   const majorOptions = [...new Set([...majorsForSchool(form.school), form.major].filter(Boolean))]
+
+  // Approved/suspended members' edits go through admin review.
+  const reviewMode = profile.status === 'approved' || profile.status === 'suspended'
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -215,6 +237,13 @@ export default function Dashboard() {
         {statusBanner && (
           <div style={{ background: statusBanner.bg, color: statusBanner.col, borderRadius: 14, padding: '13px 18px', fontSize: 13.5, lineHeight: 1.5 }}>
             {statusBanner.text}
+          </div>
+        )}
+
+        {profile.pending_review && (
+          <div style={{ background: 'var(--accent-soft)', color: 'var(--accent-ink)', borderRadius: 14, padding: '13px 18px', fontSize: 13.5, lineHeight: 1.5 }}>
+            You have edits <strong>awaiting admin review</strong>. Your public profile still shows the
+            last approved version until they're approved.
           </div>
         )}
 
@@ -244,7 +273,12 @@ export default function Dashboard() {
                 <Check size={15} color="var(--pub)" />Saved
               </span>
             )}
-            {!saved && dirty && (
+            {submitted && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: '600 13.5px var(--body)', color: 'var(--pub)' }}>
+                <Check size={15} color="var(--pub)" />Sent for review
+              </span>
+            )}
+            {!saved && !submitted && dirty && (
               <span style={{ font: '600 13px var(--body)', color: 'var(--faint)' }}>Unsaved changes</span>
             )}
             {profile.status === 'approved' && (
@@ -252,8 +286,8 @@ export default function Dashboard() {
                 View public ↗
               </Link>
             )}
-            <button onClick={save} disabled={saving} className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 14, borderRadius: 11 }}>
-              {saving ? 'Saving…' : 'Save changes'}
+            <button onClick={save} disabled={saving} className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 14, borderRadius: 11 }} title={reviewMode ? 'Edits are reviewed by an admin before going public' : undefined}>
+              {saving ? 'Saving…' : reviewMode ? 'Submit for review' : 'Save changes'}
             </button>
           </div>
         </div>

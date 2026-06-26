@@ -21,8 +21,14 @@ export default function Admin() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    // Pending queue = brand-new accounts (status 'pending') + approved members
+    // who have a staged edit (pending_review = true).
     const [p, a] = await Promise.all([
-      supabase.from('profiles').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
+      supabase
+        .from('profiles')
+        .select('*')
+        .or('status.eq.pending,pending_review.eq.true')
+        .order('created_at', { ascending: false }),
       supabase
         .from('profiles')
         .select('*')
@@ -42,6 +48,25 @@ export default function Admin() {
 
   const setStatus = async (id, status) => {
     const { error } = await supabase.from('profiles').update({ status }).eq('id', id)
+    if (error) setError(error.message)
+    else load()
+  }
+
+  // Approve a queue item: apply the staged draft for an edit, else approve the
+  // new account.
+  const approveItem = async (row) => {
+    const { error } = row.pending_review
+      ? await supabase.rpc('admin_apply_draft', { target: row.id })
+      : await supabase.from('profiles').update({ status: 'approved' }).eq('id', row.id)
+    if (error) setError(error.message)
+    else load()
+  }
+
+  // Reject a queue item: discard the draft for an edit, else reject the account.
+  const rejectItem = async (row) => {
+    const { error } = row.pending_review
+      ? await supabase.from('profiles').update({ pending_review: false, draft: null }).eq('id', row.id)
+      : await supabase.from('profiles').update({ status: 'rejected' }).eq('id', row.id)
     if (error) setError(error.message)
     else load()
   }
@@ -93,19 +118,26 @@ export default function Admin() {
         ) : tab === 'pending' ? (
           pending.length > 0 ? (
             <div className="card anim-fade-up" style={{ borderRadius: 16, overflow: 'hidden' }}>
-              <GridHead cols="2fr 2fr 2fr 1.2fr 1.4fr" items={['Name', 'Email', 'Major', 'Applied', '']} />
-              {pending.map((p) => (
-                <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 2fr 1.2fr 1.4fr', gap: 12, padding: '16px 22px', borderTop: '1px solid var(--line)', alignItems: 'center' }}>
-                  <span style={{ font: '600 14.5px var(--body)', color: 'var(--ink)' }}>{p.full_name}</span>
-                  <span style={{ fontSize: 13.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.email}</span>
-                  <span style={{ fontSize: 13.5, color: 'var(--muted)' }}>{p.major || '—'}</span>
-                  <span style={{ fontSize: 13.5, color: 'var(--muted)' }}>{fmtDate(p.created_at)}</span>
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <button onClick={() => setStatus(p.id, 'rejected')} style={btnReject}>Reject</button>
-                    <button onClick={() => setStatus(p.id, 'approved')} style={btnApprove}>Approve</button>
+              <GridHead cols="1.8fr 1.3fr 2fr 1.4fr 1.4fr" items={['Name', 'Type', 'Major', 'Submitted', '']} />
+              {pending.map((p) => {
+                const isEdit = p.pending_review
+                const major = isEdit ? p.draft?.major || p.major : p.major
+                return (
+                  <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.3fr 2fr 1.4fr 1.4fr', gap: 12, padding: '16px 22px', borderTop: '1px solid var(--line)', alignItems: 'center' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ font: '600 14.5px var(--body)', color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.full_name || '—'}</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--faint)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.email}</div>
+                    </div>
+                    <span style={isEdit ? tagEdit : tagNew}>{isEdit ? 'Edit' : 'New account'}</span>
+                    <span style={{ fontSize: 13.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{major || '—'}</span>
+                    <span style={{ fontSize: 13.5, color: 'var(--muted)' }}>{fmtDate(isEdit ? p.updated_at : p.created_at)}</span>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button onClick={() => rejectItem(p)} style={btnReject}>{isEdit ? 'Discard' : 'Reject'}</button>
+                      <button onClick={() => approveItem(p)} style={btnApprove}>Approve</button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <EmptyPending />
@@ -128,6 +160,9 @@ export default function Admin() {
                         {a.full_name}
                         {a.status === 'suspended' && (
                           <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--faint)' }}>(suspended)</span>
+                        )}
+                        {a.pending_review && (
+                          <span style={{ marginLeft: 8, fontSize: 11, color: 'oklch(0.8 0.13 85)' }}>· edit pending</span>
                         )}
                       </span>
                     </div>
@@ -230,3 +265,13 @@ const btnRemove = {
   color: 'oklch(0.72 0.17 25)',
   cursor: 'pointer',
 }
+
+const tagBase = {
+  display: 'inline-block',
+  font: '600 11.5px var(--body)',
+  padding: '3px 10px',
+  borderRadius: 99,
+  justifySelf: 'start',
+}
+const tagNew = { ...tagBase, background: 'var(--accent-soft)', color: 'var(--accent-ink)' }
+const tagEdit = { ...tagBase, background: 'oklch(0.34 0.08 85)', color: 'oklch(0.85 0.13 85)' }

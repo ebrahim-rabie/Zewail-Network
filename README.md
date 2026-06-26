@@ -52,10 +52,19 @@ npm install
 ### 2. Create a Supabase project
 
 At [supabase.com](https://supabase.com), create a free project. Then in the
-**SQL editor** run, in order:
+**SQL editor** run these files **in order**:
 
-1. `supabase/schema.sql`
-2. `supabase/seed.sql` (optional demo data — safe to skip / delete later)
+1. `supabase/schema.sql` — tables, RLS, triggers, the directory view (this is the
+   full, up-to-date schema; a fresh project only needs this one).
+2. `supabase/seed.sql` — optional demo data (12 grads + a few pending), safe to skip.
+3. `supabase/03_open_signup.sql` — auto-confirm signups (no email-verification wait).
+
+The `02_*` and `04_*` files are **incremental migrations** for a database that was
+created from an earlier version of `schema.sql`. On a brand-new project you can
+skip them — `schema.sql` already includes everything they add (useful links,
+storage policies, admin remove, and the edit-review workflow).
+
+Then create a **public Storage bucket named `avatars`** (Storage → New bucket → Public).
 
 In **Authentication → Providers → Email**, for the smoothest local flow you can
 turn **"Confirm email"** off (otherwise new signups must confirm before logging in).
