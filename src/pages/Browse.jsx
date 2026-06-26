@@ -82,7 +82,7 @@ export default function Browse() {
             gap: 16,
           }}
         >
-          <Logo to="/browse" />
+          <Logo />
           <AuthButtons />
         </div>
       </header>

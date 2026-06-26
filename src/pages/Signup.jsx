@@ -35,7 +35,7 @@ export default function Signup() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--line)' }}>
-        <Logo to="/browse" size={27} fontSize={16} />
+        <Logo size={27} fontSize={16} />
       </div>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px' }}>

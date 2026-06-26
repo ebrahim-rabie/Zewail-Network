@@ -31,6 +31,7 @@ create table if not exists public.profiles (
   linkedin      text,
   github        text,
   twitter       text,
+  links         jsonb not null default '[]'::jsonb,  -- admin-curated useful links (always public)
   privacy       jsonb not null default
                   '{"about":true,"location":true,"work":true,"email":true,"phone":false,"linkedin":true,"github":true,"twitter":false}'::jsonb,
   status        text not null default 'pending'
@@ -165,6 +166,7 @@ select
   current_title,
   current_company,
   career_path,
+  links,
   -- masked fields ---------------------------------------------------------
   case when coalesce((privacy->>'about')::boolean, true)    then about    end as about,
   case when coalesce((privacy->>'location')::boolean, true) then location end as location,
@@ -178,3 +180,24 @@ from public.profiles
 where status = 'approved';
 
 grant select on public.directory_profiles to anon, authenticated;
+
+-- ----------------------------------------------------------------------------
+-- 7. Storage policies for the `avatars` bucket (create the bucket first, public).
+--    Files live under "<auth.uid>/avatar.ext"; members manage only their folder.
+-- ----------------------------------------------------------------------------
+drop policy if exists "avatars public read"  on storage.objects;
+drop policy if exists "avatars owner insert" on storage.objects;
+drop policy if exists "avatars owner update" on storage.objects;
+drop policy if exists "avatars owner delete" on storage.objects;
+
+create policy "avatars public read" on storage.objects
+  for select using (bucket_id = 'avatars');
+create policy "avatars owner insert" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "avatars owner update" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "avatars owner delete" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);

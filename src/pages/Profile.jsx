@@ -1,13 +1,16 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import Avatar from '../components/Avatar'
 import AuthButtons from '../components/AuthButtons'
+import UsefulLinks from '../components/UsefulLinks'
 import { ChevronLeft, Pin, Cap } from '../components/Icons'
 import { useGraduate } from '../hooks/useGraduates'
+import { useAuth } from '../context/AuthContext'
 
 export default function Profile() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { graduate: sel, loading, error } = useGraduate(id)
+  const { isAdmin } = useAuth()
 
   return (
     <div>
@@ -120,6 +123,7 @@ export default function Profile() {
                     </div>
                   </Panel>
                 )}
+                <UsefulLinks profileId={sel.id} initialLinks={sel.links} isAdmin={isAdmin} />
               </div>
 
               {/* right column */}

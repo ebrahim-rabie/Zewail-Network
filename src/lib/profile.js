@@ -15,13 +15,6 @@ export const CAREER_PATHS = [
   { value: 'other', label: 'Other' },
 ]
 
-export const SCHOOLS = [
-  'School of Sciences & Engineering',
-  'School of Computational Sciences & AI',
-  'School of Biotechnology',
-  'School of Nanotechnology',
-]
-
 export const DEFAULT_PRIVACY = {
   about: true,
   location: true,
@@ -108,5 +101,6 @@ export function decorate(profile) {
     pathName: PATH_LABELS[profile.career_path] || PATH_LABELS.other,
     privacy: { ...DEFAULT_PRIVACY, ...(profile.privacy || {}) },
     experiences: profile.experiences || [],
+    links: profile.links || [],
   }
 }

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 // The ZC Network wordmark + lockup. Renders as a link by default (to the
 // directory) but can be a plain block via `as="div"`.
-export default function Logo({ to = '/browse', size = 30, fontSize = 18 }) {
+export default function Logo({ to = '/', size = 30, fontSize = 18 }) {
   const inner = (
     <>
       <img
