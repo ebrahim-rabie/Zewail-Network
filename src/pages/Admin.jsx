@@ -74,11 +74,22 @@ export default function Admin() {
     else load()
   }
 
-  const remove = async (id) => {
+  const remove = async (row) => {
     if (!window.confirm('Permanently remove this member and their account? This cannot be undone.')) return
+    // Best-effort: delete their avatar files from Storage first to reclaim space.
+    if (row.user_id) {
+      try {
+        const { data: files } = await supabase.storage.from('avatars').list(row.user_id)
+        if (files?.length) {
+          await supabase.storage.from('avatars').remove(files.map((f) => `${row.user_id}/${f.name}`))
+        }
+      } catch {
+        /* non-fatal — proceed with account removal regardless */
+      }
+    }
     // RPC deletes the auth user too (cascades to the profile), so the person
     // can't get stuck on a half-deleted account and can re-register later.
-    const { error } = await supabase.rpc('admin_remove_member', { target: id })
+    const { error } = await supabase.rpc('admin_remove_member', { target: row.id })
     if (error) setError(error.message)
     else load()
   }
@@ -216,7 +227,7 @@ export default function Admin() {
                           >
                             {a.status === 'suspended' ? 'Restore' : 'Suspend'}
                           </button>
-                          <button onClick={() => remove(a.id)} style={btnRemove}>Remove</button>
+                          <button onClick={() => remove(a)} style={btnRemove}>Remove</button>
                         </>
                       )}
                     </div>

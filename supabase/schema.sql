@@ -231,6 +231,11 @@ create policy "avatars owner update" on storage.objects
 create policy "avatars owner delete" on storage.objects
   for delete to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+-- Admins may delete any avatar (used when removing a member).
+drop policy if exists "avatars admin delete" on storage.objects;
+create policy "avatars admin delete" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'avatars' and public.is_admin());
 
 -- ----------------------------------------------------------------------------
 -- 8. admin_remove_member(): delete a member's profile AND their auth account.

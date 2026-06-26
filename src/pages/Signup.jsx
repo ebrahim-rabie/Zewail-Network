@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
 import { Info, Check } from '../components/Icons'
 import { useAuth } from '../context/AuthContext'
+import { isEmailSyntaxValid, suggestEmailFix, checkEmailDomainDeliverable } from '../lib/email'
 
 export default function Signup() {
   const { signUp, user } = useAuth()
@@ -22,11 +23,35 @@ export default function Signup() {
   const onSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    // Email checks (no message sent): syntax, common typos, and a real-domain
+    // (MX) lookup so fake/mistyped domains are caught before the account is made.
+    if (!isEmailSyntaxValid(form.email)) {
+      setError('Please enter a valid email address.')
+      return
+    }
+    const suggestion = suggestEmailFix(form.email)
+    if (suggestion) {
+      setError(`Did you mean ${suggestion}? Fix the email or re-enter it to continue.`)
+      return
+    }
     if (form.password.length < 8) {
       setError('Password must be at least 8 characters.')
       return
     }
+
     setBusy(true)
+    const domainCheck = await checkEmailDomainDeliverable(form.email)
+    if (!domainCheck.ok) {
+      setBusy(false)
+      setError(
+        domainCheck.reason === 'no-domain'
+          ? "That email's domain doesn't exist — check for a typo."
+          : "That email's domain can't receive mail — check for a typo."
+      )
+      return
+    }
+
     const { data, error } = await signUp(form)
     setBusy(false)
     if (error) {
