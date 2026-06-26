@@ -1,7 +1,6 @@
 # ZC Network
-
 A web platform for **Zewail City of Science and Technology** that connects current
-students with alumni. It's a searchable graduate directory: approved alumni
+students with alumni. It's a searchable graduate, directory: approved alumni
 voluntarily share their journey and contact info, and anyone can browse and reach out.
 
 Built from the `ZC Network.dc.html` design, implemented faithfully with the
@@ -28,6 +27,7 @@ only returns approved members and nulls out any field the owner marked private â
 hidden data never leaves the database.
 
 ## Project structure
+Rabie
 
 ```
 src/
