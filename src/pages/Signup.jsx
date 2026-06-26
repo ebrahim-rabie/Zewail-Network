@@ -33,6 +33,13 @@ export default function Signup() {
       setError(error.message)
       return
     }
+    // Supabase's email-enumeration protection returns a fake user with an empty
+    // identities array when the email is already registered — detect that and
+    // tell the user, instead of showing a misleading "application received".
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setError('An account with this email already exists. Try logging in instead.')
+      return
+    }
     // No email confirmation required → the user is logged in immediately; take
     // them to their dashboard to complete their details before admin review.
     if (data?.session) {

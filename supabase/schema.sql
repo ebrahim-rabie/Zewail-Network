@@ -204,3 +204,28 @@ create policy "avatars owner update" on storage.objects
 create policy "avatars owner delete" on storage.objects
   for delete to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ----------------------------------------------------------------------------
+-- 8. admin_remove_member(): delete a member's profile AND their auth account.
+-- ----------------------------------------------------------------------------
+create or replace function public.admin_remove_member(target uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid;
+begin
+  if not public.is_admin() then
+    raise exception 'Only admins can remove members';
+  end if;
+  select user_id into uid from public.profiles where id = target;
+  delete from public.profiles where id = target;
+  if uid is not null then
+    delete from auth.users where id = uid;
+  end if;
+end;
+$$;
+
+grant execute on function public.admin_remove_member(uuid) to authenticated;

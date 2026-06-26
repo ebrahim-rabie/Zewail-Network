@@ -7,7 +7,7 @@ import ExperienceEditor from '../components/ExperienceEditor'
 import { Check } from '../components/Icons'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { DEFAULT_PRIVACY, initials, majorShort, avatarTint } from '../lib/profile'
+import { DEFAULT_PRIVACY, initials, majorShort, avatarTint, currentExperience } from '../lib/profile'
 import { SCHOOLS, majorsForSchool, schoolForMajor } from '../lib/zc'
 import { isFuture, comparePoint, formatRange } from '../lib/dates'
 
@@ -30,7 +30,7 @@ function toForm(p) {
     photo_url: p.photo_url || '',
     location: p.location || '',
     about: p.about || '',
-    school: p.school || schoolForMajor(p.major) || SCHOOLS[0],
+    school: p.school || schoolForMajor(p.major) || '',
     major: p.major || '',
     started_year: p.started_year || '',
     grad_year: p.grad_year || '',
@@ -67,7 +67,7 @@ function validateExperiences(experiences) {
 }
 
 export default function Dashboard() {
-  const { profile, user, isAdmin, refreshProfile, signOut } = useAuth()
+  const { profile, user, isAdmin, loading, refreshProfile, signOut } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState('basic')
   const [form, setForm] = useState(null)
@@ -91,6 +91,21 @@ export default function Dashboard() {
 
   const pct = useMemo(() => (form ? completion(form) : 0), [form])
   const dirty = form ? JSON.stringify(form) !== snapshot.current : false
+
+  // Auth finished but there's no profile row → the account was removed by an admin.
+  if (!loading && user && !profile) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, textAlign: 'center', padding: 24 }}>
+        <div style={{ font: '700 22px var(--display)' }}>This account is no longer available</div>
+        <div style={{ fontSize: 15, color: 'var(--muted)', maxWidth: 420 }}>
+          Your profile has been removed by an administrator. If you think this is a mistake, contact the ZC Network team.
+        </div>
+        <button onClick={() => signOut().then(() => navigate('/'))} className="btn btn-primary" style={{ padding: '11px 22px', borderRadius: 11 }}>
+          Sign out
+        </button>
+      </div>
+    )
+  }
 
   if (!profile || !form) {
     return (
@@ -135,7 +150,7 @@ export default function Dashboard() {
     setSaving(true)
     // Compose each experience's display string + carry the headline/path forward.
     const experiences = form.experiences.map((x) => ({ ...x, dates: formatRange(x) || x.dates || '' }))
-    const headline = experiences[0]
+    const headline = currentExperience(experiences)
     const payload = {
       full_name: form.full_name,
       photo_url: form.photo_url || null,
@@ -298,6 +313,7 @@ export default function Dashboard() {
               <Labeled label="School">
                 <select className="field-input compact select-caret" style={{ paddingRight: 36 }} value={form.school}
                   onChange={(e) => { const school = e.target.value; setForm((f) => ({ ...f, school, major: majorsForSchool(school).includes(f.major) ? f.major : '' })) }}>
+                  <option value="">Select your school</option>
                   {SCHOOLS.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Labeled>
@@ -320,7 +336,8 @@ export default function Dashboard() {
         {tab === 'career' && (
           <Section title="Work experience" headerRight={<PrivacyToggle isPublic={form.privacy.work} onToggle={() => toggleP('work')} padding="5px 11px" />}>
             <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 16px' }}>
-              Your most recent role (the first one) becomes the headline shown on your directory card.
+              Your current role (the one marked “Present”, otherwise the most recent) becomes the
+              headline shown on your directory card and profile.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {form.experiences.map((x, i) => (

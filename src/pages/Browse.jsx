@@ -7,6 +7,7 @@ import { Search } from '../components/Icons'
 import { useGraduates } from '../hooks/useGraduates'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { CAREER_PATHS } from '../lib/profile'
+import { SCHOOLS, majorsForSchool } from '../lib/zc'
 
 const selectStyle = {
   borderRadius: 10,
@@ -21,16 +22,19 @@ const selectStyle = {
 export default function Browse() {
   const { graduates, loading, error } = useGraduates()
   const [q, setQ] = useState('')
+  const [fSchool, setFSchool] = useState('All')
   const [fMajor, setFMajor] = useState('All')
   const [fYear, setFYear] = useState('All')
   const [fLoc, setFLoc] = useState('All')
   const [fPath, setFPath] = useState('All')
   const resultsRef = useRef(null)
 
-  const majors = useMemo(
-    () => [...new Set(graduates.map((g) => g.major).filter(Boolean))].sort(),
-    [graduates]
-  )
+  // When a school is picked, the Major dropdown lists that school's majors
+  // (mirroring the profile editor); otherwise it lists every major in the data.
+  const majors = useMemo(() => {
+    if (fSchool !== 'All') return majorsForSchool(fSchool)
+    return [...new Set(graduates.map((g) => g.major).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  }, [fSchool, graduates])
   const years = useMemo(
     () => [...new Set(graduates.map((g) => g.grad_year).filter(Boolean))].sort((a, b) => b - a),
     [graduates]
@@ -43,6 +47,7 @@ export default function Browse() {
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase()
     return graduates.filter((g) => {
+      if (fSchool !== 'All' && g.school !== fSchool) return false
       if (fMajor !== 'All' && g.major !== fMajor) return false
       if (fYear !== 'All' && String(g.grad_year) !== String(fYear)) return false
       if (fLoc !== 'All' && g.location !== fLoc) return false
@@ -53,14 +58,21 @@ export default function Browse() {
       }
       return true
     })
-  }, [graduates, q, fMajor, fYear, fLoc, fPath])
+  }, [graduates, q, fSchool, fMajor, fYear, fLoc, fPath])
 
   const clearF = () => {
     setQ('')
+    setFSchool('All')
     setFMajor('All')
     setFYear('All')
     setFLoc('All')
     setFPath('All')
+  }
+
+  // Changing school invalidates a major that doesn't belong to it.
+  const onSchool = (value) => {
+    setFSchool(value)
+    if (value !== 'All' && !majorsForSchool(value).includes(fMajor)) setFMajor('All')
   }
 
   const scrollResults = () => {
@@ -70,21 +82,21 @@ export default function Browse() {
 
   return (
     <div>
-      <header style={{ position: 'sticky', top: 0, zIndex: 30, background: 'transparent' }}>
-        <div
-          style={{
-            maxWidth: 1180,
-            margin: '0 auto',
-            padding: '14px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 16,
-          }}
-        >
-          <Logo />
-          <AuthButtons />
-        </div>
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+          background: 'transparent',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          padding: '20px 28px',
+        }}
+      >
+        <Logo />
+        <AuthButtons />
       </header>
 
       {/* hero */}
@@ -183,6 +195,12 @@ export default function Browse() {
           }}
         >
           <span style={{ font: '600 13px var(--body)', color: 'var(--faint)', marginRight: 2 }}>Filter</span>
+          <select className="select-caret" value={fSchool} onChange={(e) => onSchool(e.target.value)} style={selectStyle}>
+            <option value="All">All schools</option>
+            {SCHOOLS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
           <select className="select-caret" value={fMajor} onChange={(e) => setFMajor(e.target.value)} style={selectStyle}>
             <option value="All">All majors</option>
             {majors.map((m) => (

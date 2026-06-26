@@ -75,16 +75,28 @@ export function studySpan(profile) {
   return ''
 }
 
-// Current role/company shown on cards is derived from the most recent (first)
-// work-experience entry, falling back to stored values.
+// The "current" experience: the one the member marked as Present, otherwise the
+// most recent by start date, otherwise the first listed.
+export function currentExperience(experiences = []) {
+  if (!experiences.length) return null
+  const present = experiences.find((e) => e.present)
+  if (present) return present
+  const byStart = [...experiences].sort((a, b) => {
+    const ay = Number(a.startYear) || 0, by = Number(b.startYear) || 0
+    if (ay !== by) return by - ay
+    return (Number(b.startMonth) || 0) - (Number(a.startMonth) || 0)
+  })
+  return byStart[0]
+}
+
+// Card/header headline is derived from the current experience, falling back to
+// the stored current_title/company (which the dashboard keeps in sync on save).
 export function currentRole(profile) {
-  const first = (profile.experiences || [])[0]
-  return profile.current_title || first?.title || ''
+  return profile.current_title || currentExperience(profile.experiences)?.title || ''
 }
 
 export function currentCompany(profile) {
-  const first = (profile.experiences || [])[0]
-  return profile.current_company || first?.company || ''
+  return profile.current_company || currentExperience(profile.experiences)?.company || ''
 }
 
 export function decorate(profile) {

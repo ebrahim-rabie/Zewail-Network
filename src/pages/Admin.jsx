@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Check } from '../components/Icons'
+import { useAuth } from '../context/AuthContext'
 import { initials, avatarTint, majorShort } from '../lib/profile'
 
 function fmtDate(iso) {
@@ -11,6 +12,7 @@ function fmtDate(iso) {
 
 export default function Admin() {
   const navigate = useNavigate()
+  const { profile: me } = useAuth()
   const [tab, setTab] = useState('pending')
   const [pending, setPending] = useState([])
   const [approved, setApproved] = useState([])
@@ -45,8 +47,10 @@ export default function Admin() {
   }
 
   const remove = async (id) => {
-    if (!window.confirm('Permanently remove this member? This cannot be undone.')) return
-    const { error } = await supabase.from('profiles').delete().eq('id', id)
+    if (!window.confirm('Permanently remove this member and their account? This cannot be undone.')) return
+    // RPC deletes the auth user too (cascades to the profile), so the person
+    // can't get stuck on a half-deleted account and can re-register later.
+    const { error } = await supabase.rpc('admin_remove_member', { target: id })
     if (error) setError(error.message)
     else load()
   }
@@ -130,13 +134,19 @@ export default function Admin() {
                     <span style={{ fontSize: 13.5, color: 'var(--muted)' }}>{a.major_short || majorShort(a.major)}</span>
                     <span style={{ fontSize: 13.5, color: 'var(--muted)' }}>{a.grad_year || '—'}</span>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <button
-                        onClick={() => setStatus(a.id, a.status === 'suspended' ? 'approved' : 'suspended')}
-                        style={btnReject}
-                      >
-                        {a.status === 'suspended' ? 'Restore' : 'Suspend'}
-                      </button>
-                      <button onClick={() => remove(a.id)} style={btnRemove}>Remove</button>
+                      {a.id === me?.id ? (
+                        <span style={{ fontSize: 12.5, color: 'var(--faint)', fontWeight: 600 }}>You</span>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setStatus(a.id, a.status === 'suspended' ? 'approved' : 'suspended')}
+                            style={btnReject}
+                          >
+                            {a.status === 'suspended' ? 'Restore' : 'Suspend'}
+                          </button>
+                          <button onClick={() => remove(a.id)} style={btnRemove}>Remove</button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )

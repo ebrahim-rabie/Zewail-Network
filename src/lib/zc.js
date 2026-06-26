@@ -38,10 +38,10 @@ export const SCHOOL_MAJORS = {
   ],
 }
 
-export const SCHOOLS = Object.keys(SCHOOL_MAJORS)
+export const SCHOOLS = Object.keys(SCHOOL_MAJORS).sort((a, b) => a.localeCompare(b))
 
 export function majorsForSchool(school) {
-  return SCHOOL_MAJORS[school] || []
+  return [...(SCHOOL_MAJORS[school] || [])].sort((a, b) => a.localeCompare(b))
 }
 
 // Find which school a (possibly legacy/free-text) major belongs to, so the
