@@ -1,26 +1,40 @@
-// Zewail City schools and their undergraduate majors.
-// Compiled from the official program names (zewailcity.edu.eg is JS-rendered, so
-// these were gathered from the program listings). Adjust freely if a major
-// belongs under a different school.
+// Zewail City (UST) schools and their undergraduate programs.
+// Source: official "UST Schools" pages on zewailcity.edu.eg. Program names are
+// used as-is; parenthetical abbreviations / "(Current Program)" labels are dropped.
 export const SCHOOL_MAJORS = {
-  'School of Engineering & Applied Sciences': [
-    'Communications & Information Engineering',
-    'Nanotechnology & Nanoelectronics Engineering',
+  'School of Engineering': [
     'Aerospace Engineering',
+    'Communications and Information Engineering',
+    'Nanotechnology and Nanoelectronics Engineering',
     'Environmental Engineering',
     'Renewable Energy Engineering',
-  ],
-  'School of Sciences': [
-    'Biomedical Sciences',
-    'Materials Science',
-    'Nanoscience',
-    'Physics of Earth & Universe',
+    'Energy and Bioprocess Engineering',
+    'Mechatronics Engineering',
+    'Electric Power Engineering',
+    'Chemical and Environmental Engineering',
   ],
   'School of Computational Sciences & Artificial Intelligence': [
-    'Computer Science',
-    'Data Science & Artificial Intelligence',
-    'Software Engineering',
+    'Software Development',
+    'Data Science and Artificial Intelligence',
     'Information Technology',
+    'Cyber Security',
+  ],
+  'School of Science': [
+    'Biomedical Sciences',
+    'Nano Science',
+    'Physics',
+    'Materials Science',
+    'Biotechnology',
+  ],
+  'School of Business': [
+    'Finance and Investment Management',
+    'Marketing, Entrepreneurship, and Innovation Management',
+    'Operations, Supply Chain, and Technology Management',
+    'Human Resources Management',
+    'Business Informatics',
+    'Financial Technology',
+    'Digital Marketing',
+    'Supply Chain and Logistics',
   ],
 }
 

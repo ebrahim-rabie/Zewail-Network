@@ -99,7 +99,10 @@ security definer
 set search_path = public
 as $$
 begin
-  if not public.is_admin() then
+  -- Only restrict authenticated END-USERS. When auth.uid() is null (SQL editor,
+  -- service-role key, the signup trigger) the update is privileged — allow it,
+  -- so admins can be promoted from the dashboard SQL editor.
+  if auth.uid() is not null and not public.is_admin() then
     new.status := old.status;
     new.account_role := old.account_role;
   end if;
