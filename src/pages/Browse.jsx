@@ -17,6 +17,12 @@ const selectStyle = {
   font: '500 14px var(--body)',
   color: 'var(--ink)',
   cursor: 'pointer',
+  // Fixed width + truncation so long school/major names don't make the control
+  // huge or resize it when the selection changes.
+  width: 172,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
 }
 
 export default function Browse() {
@@ -29,12 +35,12 @@ export default function Browse() {
   const [fPath, setFPath] = useState('All')
   const resultsRef = useRef(null)
 
-  // When a school is picked, the Major dropdown lists that school's majors
-  // (mirroring the profile editor); otherwise it lists every major in the data.
-  const majors = useMemo(() => {
-    if (fSchool !== 'All') return majorsForSchool(fSchool)
-    return [...new Set(graduates.map((g) => g.major).filter(Boolean))].sort((a, b) => a.localeCompare(b))
-  }, [fSchool, graduates])
+  // Major depends on the chosen school (mirrors the profile editor): no school
+  // selected → no majors to choose from yet.
+  const majors = useMemo(
+    () => (fSchool === 'All' ? [] : majorsForSchool(fSchool)),
+    [fSchool]
+  )
   const years = useMemo(
     () => [...new Set(graduates.map((g) => g.grad_year).filter(Boolean))].sort((a, b) => b - a),
     [graduates]
@@ -201,7 +207,14 @@ export default function Browse() {
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
-          <select className="select-caret" value={fMajor} onChange={(e) => setFMajor(e.target.value)} style={selectStyle}>
+          <select
+            className="select-caret"
+            value={fMajor}
+            onChange={(e) => setFMajor(e.target.value)}
+            disabled={fSchool === 'All'}
+            title={fSchool === 'All' ? 'Pick a school first' : undefined}
+            style={{ ...selectStyle, opacity: fSchool === 'All' ? 0.5 : 1, cursor: fSchool === 'All' ? 'not-allowed' : 'pointer' }}
+          >
             <option value="All">All majors</option>
             {majors.map((m) => (
               <option key={m} value={m}>{m}</option>
