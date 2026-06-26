@@ -27,9 +27,9 @@ export const SCHOOL_MAJORS = {
     'Biotechnology',
   ],
   'School of Business': [
-    'Finance and Investment Management',
-    'Marketing, Entrepreneurship, and Innovation Management',
-    'Operations, Supply Chain, and Technology Management',
+    'Finance and Investment Management (FIM)',
+    'Marketing, Entrepreneurship, and Innovation Management (MEIM)',
+    'Operations, Supply Chain, and Technology Management (OSCTM)',
     'Human Resources Management',
     'Business Informatics',
     'Financial Technology',

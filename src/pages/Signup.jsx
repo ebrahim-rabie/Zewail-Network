@@ -1,16 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
 import { Info, Check } from '../components/Icons'
 import { useAuth } from '../context/AuthContext'
 
 export default function Signup() {
-  const { signUp } = useAuth()
+  const { signUp, user } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ fullName: '', email: '', password: '' })
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Once a session exists (e.g. right after signing up), go fill in the profile.
+  useEffect(() => {
+    if (user && !submitted) navigate('/dashboard', { replace: true })
+  }, [user, submitted, navigate])
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -22,12 +27,19 @@ export default function Signup() {
       return
     }
     setBusy(true)
-    const { error } = await signUp(form)
+    const { data, error } = await signUp(form)
     setBusy(false)
     if (error) {
       setError(error.message)
       return
     }
+    // No email confirmation required → the user is logged in immediately; take
+    // them to their dashboard to complete their details before admin review.
+    if (data?.session) {
+      navigate('/dashboard', { replace: true })
+      return
+    }
+    // Email confirmation IS required → show the "check your email" screen.
     window.scrollTo(0, 0)
     setSubmitted(true)
   }

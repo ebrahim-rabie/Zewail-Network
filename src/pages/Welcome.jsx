@@ -1,6 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
 import FloatingCards from '../components/FloatingCards'
+import AuthButtons from '../components/AuthButtons'
 import { ArrowRight } from '../components/Icons'
 import { useGraduates } from '../hooks/useGraduates'
 
@@ -48,9 +49,7 @@ export default function Welcome() {
         }}
       >
         <Logo to="/" />
-        <Link to="/login" className="btn btn-ghost" style={{ padding: '9px 18px', fontSize: 14 }}>
-          Log in
-        </Link>
+        <AuthButtons />
       </header>
 
       {/* hero content */}

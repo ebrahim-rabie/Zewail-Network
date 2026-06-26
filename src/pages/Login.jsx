@@ -1,15 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import Logo from '../components/Logo'
 import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
-  const { signIn } = useAuth()
+  const { signIn, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Already signed in? Don't show the login form — go to the dashboard.
+  useEffect(() => {
+    if (user) navigate(location.state?.from?.pathname || '/dashboard', { replace: true })
+  }, [user, navigate, location.state])
 
   const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
